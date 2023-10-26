@@ -1,0 +1,194 @@
+class Point {
+
+    x : Int <- 5;
+    y : Int <- x;
+    a : String <- "abc";
+    z : Bool <- false;
+    b : Bool <- z;
+    x <- 100;
+
+    test_comp : Bool <- 5 = y;
+    test_comp2 : Bool <- x < y;
+    test_comp <- 5 = 5;
+
+    //b <- false;
+    //x <- true;
+    //y <- "hola";
+    //a <- true;
+
+    init(g : int, z : int) : void {
+        Moab : String;
+        Moab <- "hola";
+        x_holder : Int <- x;
+        Max : String <- a;
+        x : Int <- 1024;
+        x <- void;
+        void_hold : Int <- void;
+        operaciao : Int <- 10 + y;
+
+        comparativa : Bool <- x_holder < x;
+
+        return void;
+    };
+
+
+
+    calculate(alo : string, adio : bool) : Int {
+
+        return 0;
+    };
+
+    calculate2() : Int {
+
+        return 0;
+    };
+
+
+};
+
+class Circle {
+
+    xander : Int;
+    x : Int;
+    y : Int;
+    stringo : String;
+    booleo : Bool;
+
+    init(g : int, z : int) : SELF_TYPE {
+        //x <- 10;
+        //y <- 10;
+        self_obj : SELF_TYPE;
+
+        if x = 10 then
+            out_int(50);
+            x : Int <- 10;
+        else
+            out_int(0);
+        fi;
+
+        while booleo = true  loop
+            out_int(10);
+            x <- x + 10;
+        pool;
+
+        return self_obj;
+
+    };
+
+    calculate() : Int {
+        lal : int;
+        lal <- 10;
+        return 0;
+    };
+
+    round(doubleg : Point) : Int {
+        operation : Int <- 10+10+20-20*30;
+        return 0;
+    };
+
+    getSize() : String {
+        comp : String <- "Small";
+        return comp;
+    };
+
+    getID() : Int { 
+
+        return 0;
+    };
+
+};
+
+class Square inherits Circle {
+    abc : string;
+    prueba_string : string <- "Halo";
+    efg : Bool;
+    circulo : Circle;
+    la_redonda : Circle;
+    punto : Point;
+    abc_length : int;
+
+    circulo <- la_redonda;
+    
+
+    abc <- prueba_string;
+    abc.length();
+    abc.concat(abc);
+
+
+    //self: string;
+    circulo.init(10, 20);
+    circulo.calculate();
+    circulo.round(punto);
+    punto.init(10, 20);
+    punto.calculate(prueba_string, efg);
+
+    pruebarde(g: int) : Int {
+        abc <- "Halo";
+        pruebarde(10);
+        return 0;
+    };
+
+    init(g : int, z : int) : Int {
+        //x <- 10;
+        //y <- 10;
+
+        return 0;
+    };
+
+};
+
+class Triangle inherits Square {
+    prueba_string <- "Adios desde triangle";
+    square_obj : Square;
+    string_test : String <- "Holanda";
+    obj_circle : Circle;
+    obj_circle.init(5, 5);
+    obj_circle.calculate();
+    //square_obj.pruebarda();
+
+    pruebarda3() : Int {
+        return 0;
+    };
+
+    pruebarda(a: int) : Int {
+        string_test : string <- "Alemania";
+        prueba_int : Int;
+        prueba_string <- "Adentro de pruebarda";
+        square_obj.pruebarde(10);
+        a <- 100000;
+
+        out_string("Hola mundo");
+
+        pruebarda2() : Int {
+            return 0;
+        };
+
+        return 0;
+    };
+
+
+};
+
+
+class main {
+
+    main_circle : Circle;
+
+    main_circle.init(10, 20);
+    prueba_aritmetica : int;
+
+    numero : Int <- 10;
+    prueba_aritmetica <- prueba_aritmetica-10;
+
+    main() : void {
+        num_test : int;
+        num_test <- 100;
+        prueba_2_arith : Int <- 10+prueba_aritmetica-num_test;
+
+        return void;
+    };
+
+    main.main(); // Inicializacion del programa
+
+};
+

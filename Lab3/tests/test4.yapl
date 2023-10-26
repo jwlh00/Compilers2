@@ -1,0 +1,21 @@
+class Main {
+    main() : Object {
+        let ioExample : IOExample <- new IOExample in {
+            ioExample.inputAndPrint();
+        };
+        new Object;
+    };
+};
+
+class IOExample inherits IO {
+    inputAndPrint() : SELF_TYPE {
+        out_string("Please enter your input");
+        let x : Int <- in_int() in {
+            out_string("You entered");
+            out_int(x);
+            self;
+        };
+    };
+};
+
+

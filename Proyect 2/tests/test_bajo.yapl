@@ -1,0 +1,25 @@
+class Circle {
+
+    radius : int;
+    color : string;
+    ant : string <- "Hola";
+
+    init() : void {
+        radius  <- 100;
+        color <- "Red";
+
+        return void;
+    };
+
+};
+
+class main {
+
+	main() : void {
+		circulo : Circle;
+		circulo.init();
+
+        return void;
+	};
+
+};

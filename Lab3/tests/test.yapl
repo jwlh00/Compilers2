@@ -1,0 +1,6 @@
+
+class Main inherits Ola {
+    x : String; 
+    main : Int;
+};
+

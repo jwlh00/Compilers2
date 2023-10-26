@@ -1,0 +1,31 @@
+class Main inherits outputs {
+    main(input : String) : Object {
+        inputString = input;
+        outputString = None;
+        x = counter.now();
+        randomnumber1 = randnum();
+        randomnumber2 = randnum();
+        
+        if input.length > 5 then
+            outputString = inputString
+            out_string("You inputed:")
+            out_string(outputString)
+
+            while x > "5:00"
+            loop
+                result = randomnumber1 / randomnumber2
+            pool
+        fi;
+    };
+
+};
+
+class this_is_filler inherits naruto {
+    fillerCheck(episode : mp3) : Filler {
+        hasFiller();
+    };
+
+    createFiller(text : plot) : None {
+        filler.create(text);
+    };
+};
