@@ -6,10 +6,9 @@ class player {
     prueba_int : Int <- 0;
 
     init(hardmode : bool, player_name : string) : Int {
-
         name <- player_name;
 
-        if difficulty = false then 
+        if hardmode = false then 
             health <- 80;
             attack <- 20;
         else
@@ -38,18 +37,15 @@ class player {
 
         return void;
     };
-
 };
 
 class enemy inherits player {
-
     poisoned : bool <- false;
 
     init(hardmode : bool, enemy_name : string) : void {
-
         name <- enemy_name;
 
-        if difficulty = false then 
+        if hardmode = false then 
             health <- 50;
             attack <- 10;
         else
@@ -74,18 +70,15 @@ class enemy inherits player {
 
         return void;
     };
-
 };
 
 class Item {
-
     type : String;
     name : String;
     description : String;
     price : Int;
 
     init(item_type : string, item_name : string, item_description : string, item_price : int, rarity: int) : void {
-
         type <- item_type;
         name <- item_name;
         description <- item_description;
@@ -105,23 +98,19 @@ class Item {
 
         return void;
     };
-
-
-
 };
 
 class main {
-
     myPlayer : player;
-    myPlayer.init(true, "Kirito");
     mySword : Item;
-    mySword.init("Sword", "Excalibur", "The legendary sword of King Arthur", 100, 5);
     myEnemy : enemy;
-    myEnemy.init(true, "Malenia");
     theirSword : Item;
-    theirSword.init("Sword", "Hand of Malenia", "Blade built into Malenia's prosthetic arm", 100, 5);
 
     main() : void {
+        myPlayer.init(true, "Kirito");
+        mySword.init("Sword", "Excalibur", "The legendary sword of King Arthur", 100, 5);
+        myEnemy.init(true, "Malenia");
+        theirSword.init("Sword", "Hand of Malenia", "Blade built into Malenia's prosthetic arm", 100, 5);
 
         out_string("Welcome to the game");
         myPlayer.hit();
@@ -129,7 +118,4 @@ class main {
 
         return void;
     };
-
-    main.main();
-
 };

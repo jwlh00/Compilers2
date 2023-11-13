@@ -7,39 +7,77 @@ import sys
 
 from main import Compile
 
-class NumberedPlainTextEdit(QPlainTextEdit):
-    def __init__(self):
-        super().__init__()
-        self.setLineWrapMode(QPlainTextEdit.NoWrap)
-        self.setStyleSheet("QPlainTextEdit { border:none; }")
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.cursorPositionChanged.connect(self.highlightCurrentLine)
-        self.highlightCurrentLine()
+class LineNumberArea(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.codeEditor = editor
+
+    def sizeHint(self):
+        return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
 
     def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self.viewport())
-        painter.setFont(self.font())
+        self.codeEditor.lineNumberAreaPaintEvent(event)
+
+class NumberedPlainTextEdit(QPlainTextEdit):
+    def __init__(self, *args, **kwargs):
+        super(NumberedPlainTextEdit, self).__init__(*args, **kwargs)
+        self.lineNumberArea = LineNumberArea(self)
+
+        self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
+        self.updateRequest.connect(self.updateLineNumberArea)
+        self.cursorPositionChanged.connect(self.highlightCurrentLine)
+        self.updateLineNumberAreaWidth(0)
+
+    def lineNumberAreaWidth(self):
+        digits = 1
+        max_num = max(1, self.blockCount())
+        while max_num >= 10:
+            max_num /= 10
+            digits += 1
+        space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
+        return space
+
+    def updateLineNumberAreaWidth(self, _):
+        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+
+    def updateLineNumberArea(self, rect, dy):
+        if dy:
+            self.lineNumberArea.scroll(0, dy)
+        else:
+            self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+
+        if rect.contains(self.viewport().rect()):
+            self.updateLineNumberAreaWidth(0)
+
+    def resizeEvent(self, event):
+        super(NumberedPlainTextEdit, self).resizeEvent(event)
+        cr = self.contentsRect()
+        self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
+
+    def lineNumberAreaPaintEvent(self, event):
+        painter = QPainter(self.lineNumberArea)
+        painter.fillRect(event.rect(), Qt.lightGray)
+
         block = self.firstVisibleBlock()
-        line_number = block.blockNumber() + 1
+        block_number = block.blockNumber()
         top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
         bottom = top + self.blockBoundingRect(block).height()
-        current_block = self.textCursor().block().blockNumber()
-        padding = 5  # Adjust the padding as needed
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
-                painter.setPen(Qt.black)  # Set line number color
-                rect = QRectF(0, top, 1100 - padding, self.fontMetrics().height())  # Adjust the width as needed
-                painter.drawText(rect, Qt.AlignRight | Qt.AlignTop, str(line_number))
+                number = str(block_number + 1)
+                painter.setPen(Qt.black)
+                painter.drawText(0, int(top), self.lineNumberArea.width(), self.fontMetrics().height(), Qt.AlignRight, number)
+
+
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
-            line_number += 1
+            block_number += 1
 
     def highlightCurrentLine(self):
         extra_selection = QTextEdit.ExtraSelection()
-        line_color = QColor(0, 128, 0, 50)  # Yellow with 100 (semi-transparent) alpha
+        line_color = QColor(Qt.yellow).lighter(160)
         extra_selection.format.setBackground(line_color)
         extra_selection.format.setProperty(QTextFormat.FullWidthSelection, True)
         extra_selection.cursor = self.textCursor()
@@ -328,10 +366,10 @@ class MainWindow(QMainWindow):
 				self.showErrors.setText("\n".join(compilado.printer.errors.GetErrores()))
 			else:
 				tac_code_to_display = compilado.get_tac_code()
-				print("TAC code:")
-				print("--------------------")
-				print(tac_code_to_display)
-				print("--------------------")
+				# print("TAC code:")
+				# print("--------------------")
+				# print(tac_code_to_display)
+				# print("--------------------")
 				self.showErrors.setText(tac_code_to_display)
 
 			self.tabs.setCurrentIndex(1)
@@ -373,83 +411,10 @@ class MainWindow(QMainWindow):
 	def edit_toggle_wrap(self):
 		self.editor.setLineWrapMode(1 if self.editor.lineWrapMode() == 0 else 0 )
 
-STYLE = """
-QWidget {
-    background-color: #2b2b2b;
-    color: #b8b8b8;
-    border: 1px solid #3a3a3a;
-}
-
-QLineEdit, QPlainTextEdit {
-    background-color: #323232;
-    color: #b8b8b8;
-    border: 1px solid #3a3a3a;
-    selection-background-color: #3a3a3a;
-}
-
-QMenuBar, QToolBar, QStatusBar {
-    background-color: #212121;
-    color: #b8b8b8;
-}
-
-QMenu {
-    background-color: #212121;
-    color: #b8b8b8;
-    border: 1px solid #3a3a3a;
-}
-
-QMenu::item:selected {
-    background-color: #3a3a3a;
-}
-
-QLabel {
-    color: #b8b8b8;
-}
-
-QPushButton {
-    background-color: #323232;
-    border: 1px solid #3a3a3a;
-    color: #b8b8b8;
-    padding: 5px;
-}
-
-QPushButton:hover {
-    background-color: #3a3a3a;
-}
-
-QPushButton:pressed {
-    background-color: #212121;
-}
-
-QTabBar::tab {
-    background-color: #212121;
-    color: #b8b8b8;
-    border: 1px solid #3a3a3a;
-    padding: 5px;
-}
-
-QTabBar::tab:selected {
-    background-color: #3a3a3a;
-}
-
-QScrollBar {
-    background-color: #212121;
-    border: 1px solid #3a3a3a;
-}
-
-QScrollBar::handle {
-    background-color: #323232;
-}
-
-QScrollBar::handle:hover {
-    background-color: #3a3a3a;
-}
-"""
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setApplicationName("PyQt5-Note")
-    app.setStyleSheet(STYLE)  # Applying the dark mode stylesheet
     window = MainWindow()
     app.exec_()

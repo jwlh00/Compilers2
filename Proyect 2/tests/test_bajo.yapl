@@ -3,6 +3,16 @@ class Circle {
     radius : int;
     color : string;
     ant : string <- "Hola";
+    
+
+    sum(g : int, h : int, k : int) : int{
+         x : int;
+         z : bool <- false;
+         x <- g + h + k + 1;
+
+        
+         return x;
+    };
 
     init() : void {
         radius  <- 100;
@@ -11,6 +21,7 @@ class Circle {
         return void;
     };
 
+
 };
 
 class main {
@@ -18,6 +29,10 @@ class main {
 	main() : void {
 		circulo : Circle;
 		circulo.init();
+        a : int <- 1;
+        b : int <- 2;
+        c : int <- 3;
+        circulo.sum(a,b,c);
 
         return void;
 	};

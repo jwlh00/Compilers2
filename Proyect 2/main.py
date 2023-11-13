@@ -136,4 +136,4 @@ class Compile():
             return "ERROR"
 
 # compile = Compile("./test_arithmetic.yapl")
-compile = Compile("./test_medio.yapl")
+compile = Compile("./test.yapl")

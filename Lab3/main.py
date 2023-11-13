@@ -149,5 +149,5 @@ class Compile():
         else:
             return "ERROR"
 
-compile = Compile("./test_arithmetic.yapl")
+compile = Compile("./test.yapl")
 # compile = Compile("./test_medio.yapl")

@@ -1,0 +1,28 @@
+class Main {
+  calc : Int;
+  val1 : Int <- 3;
+  val2 : Int <- 6;
+  val3 : Int <- 2;
+  result : Int;
+
+  main(): Int {
+    {
+      calc <- equation(val1, val2);
+      if val1 < val2
+      then{
+        out_int(val1);
+      }
+      else{
+        out_int(val2);
+      }
+      fi;
+    }
+  };
+
+  equation(param1: Int, param2: Int): Int {
+    {
+        result <- param1 + param2;
+        return (result);
+    }
+  };
+};

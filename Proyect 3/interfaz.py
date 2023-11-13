@@ -5,41 +5,81 @@ from PyQt5.QtCore import *
 import os
 import sys
 
-from main import Compile
+from YAPL_Printer import YAPLPrinter
+from TranslateToTAC import *
+from TranslatetoMIPS import *
 
-class NumberedPlainTextEdit(QPlainTextEdit):
-    def __init__(self):
-        super().__init__()
-        self.setLineWrapMode(QPlainTextEdit.NoWrap)
-        self.setStyleSheet("QPlainTextEdit { border:none; background-color: #282C34; color: #A9B7C6; }")
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.cursorPositionChanged.connect(self.highlightCurrentLine)
-        self.highlightCurrentLine()
+class LineNumberArea(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.codeEditor = editor
+
+    def sizeHint(self):
+        return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
 
     def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self.viewport())
-        painter.setFont(self.font())
+        self.codeEditor.lineNumberAreaPaintEvent(event)
+
+class NumberedPlainTextEdit(QPlainTextEdit):
+    def __init__(self, *args, **kwargs):
+        super(NumberedPlainTextEdit, self).__init__(*args, **kwargs)
+        self.lineNumberArea = LineNumberArea(self)
+
+        self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
+        self.updateRequest.connect(self.updateLineNumberArea)
+        self.cursorPositionChanged.connect(self.highlightCurrentLine)
+        self.updateLineNumberAreaWidth(0)
+
+    def lineNumberAreaWidth(self):
+        digits = 1
+        max_num = max(1, self.blockCount())
+        while max_num >= 10:
+            max_num /= 10
+            digits += 1
+        space = 3 + self.fontMetrics().horizontalAdvance('9') * digits
+        return space
+
+    def updateLineNumberAreaWidth(self, _):
+        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+
+    def updateLineNumberArea(self, rect, dy):
+        if dy:
+            self.lineNumberArea.scroll(0, dy)
+        else:
+            self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+
+        if rect.contains(self.viewport().rect()):
+            self.updateLineNumberAreaWidth(0)
+
+    def resizeEvent(self, event):
+        super(NumberedPlainTextEdit, self).resizeEvent(event)
+        cr = self.contentsRect()
+        self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
+
+    def lineNumberAreaPaintEvent(self, event):
+        painter = QPainter(self.lineNumberArea)
+        painter.fillRect(event.rect(), Qt.lightGray)
+
         block = self.firstVisibleBlock()
-        line_number = block.blockNumber() + 1
+        block_number = block.blockNumber()
         top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
         bottom = top + self.blockBoundingRect(block).height()
-        current_block = self.textCursor().block().blockNumber()
-        padding = 5  # Adjust the padding as needed
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
-                painter.setPen(Qt.black)  # Set line number color
-                rect = QRectF(0, top, 1100 - padding, self.fontMetrics().height())  # Adjust the width as needed
-                painter.drawText(rect, Qt.AlignRight | Qt.AlignTop, str(line_number))
+                number = str(block_number + 1)
+                painter.setPen(Qt.black)
+                painter.drawText(0, int(top), self.lineNumberArea.width(), self.fontMetrics().height(), Qt.AlignRight, number)
+
+
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
-            line_number += 1
+            block_number += 1
 
     def highlightCurrentLine(self):
         extra_selection = QTextEdit.ExtraSelection()
-        line_color = QColor(0, 128, 0, 50)  # Yellow with 100 (semi-transparent) alpha
+        line_color = QColor(Qt.yellow).lighter(160)
         extra_selection.format.setBackground(line_color)
         extra_selection.format.setProperty(QTextFormat.FullWidthSelection, True)
         extra_selection.cursor = self.textCursor()
@@ -68,10 +108,12 @@ class MainWindow(QMainWindow):
 		self.tabs = QTabWidget()
 		self.tab1 = QWidget()
 		self.tab2 = QWidget()
+		self.tab3 = QWidget()
 
 		# # Add tabs
 		self.tabs.addTab(self.tab1, "Text Editor")
 		self.tabs.addTab(self.tab2, "Results")
+		self.tabs.addTab(self.tab3, "MIPS")
 
 		# creating a QPlainTextEdit object
 		self.editor = NumberedPlainTextEdit()
@@ -82,6 +124,13 @@ class MainWindow(QMainWindow):
 		self.tab2.layout = QVBoxLayout()
 		self.tab2.layout.addWidget(self.showErrors)
 		self.tab2.setLayout(self.tab2.layout)
+
+		self.showMIPS = QLabel()
+		self.showMIPS.setFont(fixedfont)
+		self.showMIPS.setText("")
+		self.tab3.layout = QVBoxLayout()
+		self.tab3.layout.addWidget(self.showMIPS)
+		self.tab3.setLayout(self.tab3.layout)
 
 		self.editor.setFont(fixedfont)
 
@@ -320,21 +369,27 @@ class MainWindow(QMainWindow):
 		input = self.path
 
 		if self.editor.toPlainText() != '':
-			compilado = Compile(input)
+			compilado = YAPLPrinter(input)
 
-			if compilado.myError.getHasError():
-				self.showErrors.setText("\n".join(compilado.myError.listErrors))
-			elif hasattr(compilado.printer, 'errors') and len(compilado.printer.errors.GetErrores()) > 0:
-				self.showErrors.setText("\n".join(compilado.printer.errors.GetErrores()))
-			else:
-				tac_code_to_display = compilado.get_tac_code()
-				print("TAC code:")
-				print("--------------------")
-				print(tac_code_to_display)
-				print("--------------------")
-				self.showErrors.setText(tac_code_to_display)
+			tree = compilado.treeStruct
 
-			self.tabs.setCurrentIndex(1)
+			intermedio = TranslateToTACFunc(tree, compilado.symbolTable)
+
+			print("=======================================================================")
+
+			print(intermedio.__str__())
+			print("---------------TAC Code---------------")
+			print(intermedio.translate())
+			self.showErrors.setText(intermedio.translate())
+			print("=======================================================================")
+
+
+			print("---------------MIPS Code---------------")
+			ensamblador = TranslatetoMIPSFunc(intermedio.quadruplesList)
+			print(str(ensamblador.data_section + ensamblador.text_section))
+			self.showMIPS.setText(str(ensamblador.data_section + ensamblador.text_section))
+
+			self.tabs.setCurrentIndex(2)
 
 			
 	# save to path method
@@ -374,43 +429,9 @@ class MainWindow(QMainWindow):
 		self.editor.setLineWrapMode(1 if self.editor.lineWrapMode() == 0 else 0 )
 
 
+
 if __name__ == '__main__':
-	app = QApplication(sys.argv)
-app.setStyleSheet("""
-QPushButton {
-    background-color: #E5E5E5;
-    color: #2E3134;
-    border: 1px solid #D5D5D5;
-    border-radius: 4px;
-}
-QPushButton:hover {
-    background-color: #D5D5D5;
-}
-QPushButton:pressed {
-    background-color: #C5C5C5;
-}
-
-QAction {
-    background-color: #E5E5E5;
-    color: #282C34;
-    border: 1px solid #E5E5E5;
-    border-radius: 4px;
-}
-QAction:hover {
-    background-color: #D5D5D5;
-}
-""")
-app.setApplicationName("PyQt5-Note")
-
-window = MainWindow()
-window.setStyleSheet("""background-color: #282C34;
-QTextEdit {
-    background-color: #E5E5E5;
-    color: #282C34;
-}
-QResultEdit {
-	background-color: #E5E5E5;
-    color: #282C34;
-}
-""")
-app.exec_()
+    app = QApplication(sys.argv)
+    app.setApplicationName("PyQt5-Note")
+    window = MainWindow()
+    app.exec_()
