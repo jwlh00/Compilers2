@@ -2,7 +2,7 @@ class Main {
   calc : Int;
   val1 : Int <- 3;
   val2 : Int <- 6;
-  val3 : Int <- 4;
+  val3 : Int <- 2;
 
   main(): Int {
     {

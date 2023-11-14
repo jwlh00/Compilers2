@@ -2,12 +2,14 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-import os
-import sys
-
 from YAPL_Printer import YAPLPrinter
 from TranslateToTAC import *
 from TranslatetoMIPS import *
+
+import os
+import sys
+
+
 
 class LineNumberArea(QWidget):
     def __init__(self, editor):

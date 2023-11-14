@@ -1,3 +1,5 @@
+import re
+
 class TranslatetoMIPSFunc:
     def __init__(self, cuadruplas):
 
@@ -27,10 +29,23 @@ class TranslatetoMIPSFunc:
             self.text_section += f"\n{'    ' * self.indentation}li $v0, 10\n{'    ' * self.indentation}syscall\n"
 
 
+    # def get_temp(self):
+    #     temp = f"t{self.temp_counter}"
+    #     self.temp_counter += 1
+    #     return temp
+
+    # def get_temp(self):
+    #     # Using a different naming convention for temporary registers
+    #     temp = f"$temp{self.temp_counter}"
+    #     self.temp_counter += 1
+    #     return temp
+
     def get_temp(self):
-        temp = f"t{self.temp_counter}"
+        # Using a correct naming convention for temporary registers
+        temp = f"$t{self.temp_counter}"  # Single $ sign and using 't' for temporary registers
         self.temp_counter += 1
         return temp
+
     
     def get_a(self):
         a = f"a{self.a_counter}"
@@ -44,8 +59,8 @@ class TranslatetoMIPSFunc:
     
     def recorrer_cuadruplas(self,cuadruplas_actuales, cuadrupla_exit_label = None):
 
-        for indice, cuadrupla in enumerate(cuadruplas_actuales):
-            self.generar_codigo_mips(cuadrupla) 
+        for indice, quadruple in enumerate(cuadruplas_actuales):
+            self.generar_codigo_mips(quadruple) 
 
     def generar_codigo_mips(self, cuadrupla_actual):
 
@@ -94,39 +109,42 @@ class TranslatetoMIPSFunc:
 
         if cuadrupla_actual.op == 'ReturnHandler':
             self.mips_return(cuadrupla_actual)
+
+        self.cleanup_mips_code()
+        self.correct_register_syntax()
                
                 
-    def mips_jump(self, cuadrupla):
-        self.text_section += f"\n{'    ' * self.indentation}j {cuadrupla.result}\n"
+    def mips_jump(self, quadruple):
+        self.text_section += f"\n{'    ' * self.indentation}j {quadruple.result}\n"
 
-    def mips_pre_param(self, cuadrupla):
+    def mips_pre_param(self, quadruple):
 
         address_temporal = self.get_a()
 
-        self.text_section += f"\n{'    ' * self.indentation}lw ${address_temporal}, {cuadrupla.arg1}\n"
+        self.text_section += f"\n{'    ' * self.indentation}lw ${address_temporal}, {quadruple.arg1}\n"
 
-        self.variables_cargadas[cuadrupla.arg1] = address_temporal
+        self.variables_cargadas[quadruple.arg1] = address_temporal
 
-        if cuadrupla.result not in self.parametros_metodos:
+        if quadruple.result not in self.parametros_metodos:
 
-            self.parametros_metodos[cuadrupla.result] = [(cuadrupla.arg1, address_temporal)]
+            self.parametros_metodos[quadruple.result] = [(quadruple.arg1, address_temporal)]
 
         else:
 
-            self.parametros_metodos[cuadrupla.result].append((cuadrupla.arg1, address_temporal))
+            self.parametros_metodos[quadruple.result].append((quadruple.arg1, address_temporal))
         
-    def mips_method_call(self, cuadrupla):
+    def mips_method_call(self, quadruple):
 
-        self.text_section += f"\n{'    ' * self.indentation}jal {cuadrupla.arg1}\n"
+        self.text_section += f"\n{'    ' * self.indentation}jal {quadruple.arg1}\n"
 
-    def mips_return(self, cuadrupla):
+    def mips_return(self, quadruple):
 
         self.text_section += f"\n{'    ' * self.indentation}jr $ra\n"
 
 
-    def mips_while(self, cuadrupla):
+    def mips_while(self, quadruple):
 
-        cuadrupla_siguiente = self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(cuadrupla) + 1]
+        cuadrupla_siguiente = self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(quadruple) + 1]
         cuadrupla_comparacion = self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(cuadrupla_siguiente) + 1]
         instruccion_comparacion = ""
         cuadrupla_jump_if_false = self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(cuadrupla_comparacion) + 1]
@@ -183,9 +201,9 @@ class TranslatetoMIPSFunc:
 
         cuadrupla_end_while = None
 
-        for cuadrupla in self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(cuadrupla_comparacion):]:
-            if cuadrupla.op == 'LabelFinish':
-                cuadrupla_end_while = cuadrupla
+        for quadruple in self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(cuadrupla_comparacion):]:
+            if quadruple.op == 'LabelFinish':
+                cuadrupla_end_while = quadruple
                 break
         
         etiqueta_salto_end_while = "while_end_" + cuadrupla_end_while.result # while_end_L1
@@ -199,10 +217,10 @@ class TranslatetoMIPSFunc:
         self.text_section += f"\nwhile_end_{cuadrupla_end_while.result}:\n"
 
 
-    def mips_ifs(self, cuadrupla):
-        indice_cuadrupla_actual = self.cuadruplas_iniciales.index(cuadrupla)
+    def mips_ifs(self, quadruple):
+        indice_cuadrupla_actual = self.cuadruplas_iniciales.index(quadruple)
         cuadrupla_siguiente = self.cuadruplas_iniciales[indice_cuadrupla_actual + 1]
-        print(f"Handling IF: cuadrupla actual {cuadrupla}, cuadrupla siguiente {cuadrupla_siguiente}")
+        # print(f"Handling IF: quadruple actual {quadruple}, quadruple siguiente {cuadrupla_siguiente}")
         instruccion_comparacion = ""
 
         match cuadrupla_siguiente.op:
@@ -253,7 +271,7 @@ class TranslatetoMIPSFunc:
             self.temp_counter += 1
             arg2 = self.variables_cargadas[cuadrupla_siguiente.arg2]
 
-        print(f"Comparing {arg1} and {arg2} with operation {instruccion_comparacion}")
+        # print(f"Comparing {arg1} and {arg2} with operation {instruccion_comparacion}")
         cuadrupla_jump_if_false = self.cuadruplas_iniciales[indice_cuadrupla_actual + 2]
 
         etiqueta_salto = "if_part_" + cuadrupla_jump_if_false.result # if_part_L1
@@ -264,9 +282,9 @@ class TranslatetoMIPSFunc:
         cuadrupla_exit_label = None
 
 
-        for cuadrupla in self.cuadruplas_iniciales[indice_cuadrupla_actual:]:
-            if cuadrupla.op == 'LabelFinish':
-                cuadrupla_exit_label = cuadrupla
+        for quadruple in self.cuadruplas_iniciales[indice_cuadrupla_actual:]:
+            if quadruple.op == 'LabelFinish':
+                cuadrupla_exit_label = quadruple
                 break
 
         Cuadrupla_LABEL = None
@@ -303,138 +321,139 @@ class TranslatetoMIPSFunc:
 
         self.text_section += f"\n{cuadrupla_EXIT_LABEL.result}:\n"
 
-        # print(f"Completed IF handling for cuadrupla {cuadrupla}")
+        # print(f"Completed IF handling for quadruple {quadruple}")
 
+    
 
-    def mips_aritmetica(self, cuadrupla):
-
+    def mips_aritmetica(self, quadruple):
         lista_parametros = []
-
         nombre_metodo = ""
-
-        for cuadrupla_iteradora in reversed(self.cuadruplas_iniciales[:self.cuadruplas_iniciales.index(cuadrupla)]):
-
+        for cuadrupla_iteradora in reversed(self.cuadruplas_iniciales[:self.cuadruplas_iniciales.index(quadruple)]):
             if cuadrupla_iteradora.op == 'Param':
-
-                if cuadrupla_iteradora.arg1 == cuadrupla.arg1 or cuadrupla_iteradora.arg1 == cuadrupla.arg2:
+                if cuadrupla_iteradora.arg1 == quadruple.arg1 or cuadrupla_iteradora.arg1 == quadruple.arg2:
                     if cuadrupla_iteradora.result in self.parametros_metodos:
-
                         nombre_metodo = cuadrupla_iteradora.result
-
                         lista_parametros.append(self.parametros_metodos[cuadrupla_iteradora.result].pop(0))
 
             if cuadrupla_iteradora.op == 'CreateMethod':
-
                 break
 
-
         if lista_parametros:
-
             valor_retorno = "v0"
-
             self.estructura_return[nombre_metodo] = valor_retorno
-
-            if cuadrupla.op == "+":
-
+            if quadruple.op == "+":
                 self.text_section += f"\n{'    ' * self.indentation}add ${valor_retorno}, ${lista_parametros[0][1]}, ${lista_parametros[1][1]}\n"
-
                 return 
-        
-            elif cuadrupla.op == "-":
-
+       
+            elif quadruple.op == "-":
                 self.text_section += f"\n{'    ' * self.indentation}sub ${valor_retorno}, ${lista_parametros[0][1]}, ${lista_parametros[1][1]}\n"
-
                 return
             
-            elif cuadrupla.op == "*":
-
+            elif quadruple.op == "*":
                 self.text_section += f"\n{'    ' * self.indentation}mul ${valor_retorno}, ${lista_parametros[0][1]}, ${lista_parametros[1][1]}\n"
-
                 return
             
-            elif cuadrupla.op == "/":
-
+            elif quadruple.op == "/":
                 self.text_section += f"\n{'    ' * self.indentation}div ${lista_parametros[0][1]}, ${lista_parametros[1][1]}\n"
                 self.text_section += f"{'    ' * self.indentation}mflo ${valor_retorno}\n"
                 temp4 = self.get_temp()
                 self.text_section += f"{'    ' * self.indentation}mfhi ${temp4}\n"
                 self.temp_counter -= 1
-
                 return
 
 
-        cuadrupla_siguiente = self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(cuadrupla) + 1]
-
-        if cuadrupla.arg1 not in self.variables:
+        cuadrupla_siguiente = self.cuadruplas_iniciales[self.cuadruplas_iniciales.index(quadruple) + 1]
+        if quadruple.arg1 not in self.variables:
             temp1 = self.get_temp()
-            self.text_section += f"\n{'    ' * self.indentation}li ${temp1}, {cuadrupla.arg1}\n"
-            self.variables_cargadas[cuadrupla.arg1] = temp1
+            self.text_section += f"\n{'    ' * self.indentation}li ${temp1}, {quadruple.arg1}\n"
+            self.variables_cargadas[quadruple.arg1] = temp1
 
-        if cuadrupla.arg2 not in self.variables:
+        if quadruple.arg2 not in self.variables:
             temp2 = self.get_temp()
-            self.text_section += f"{'    ' * self.indentation}li ${temp2}, {cuadrupla.arg2}\n"
-            self.variables_cargadas[cuadrupla.arg2] = temp2
+            self.text_section += f"{'    ' * self.indentation}li ${temp2}, {quadruple.arg2}\n"
+            self.variables_cargadas[quadruple.arg2] = temp2
 
-        if cuadrupla.arg1 not in self.variables_cargadas:
+        if quadruple.arg1 not in self.variables_cargadas:
             temp1 = self.get_temp()
-            self.text_section += f"\n{'    ' * self.indentation}lw ${temp1}, {cuadrupla.arg1}\n"
-            self.variables_cargadas[cuadrupla.arg1] = temp1
-        if cuadrupla.arg2 not in self.variables_cargadas:
+            self.text_section += f"\n{'    ' * self.indentation}lw ${temp1}, {quadruple.arg1}\n"
+            self.variables_cargadas[quadruple.arg1] = temp1
+            
+        if quadruple.arg2 not in self.variables_cargadas:
             temp2 = self.get_temp()
-            self.text_section += f"{'    ' * self.indentation}lw ${temp2}, {cuadrupla.arg2}\n"
-            self.variables_cargadas[cuadrupla.arg2] = temp2
+            self.text_section += f"{'    ' * self.indentation}lw ${temp2}, {quadruple.arg2}\n"
+            self.variables_cargadas[quadruple.arg2] = temp2
 
-        if cuadrupla.arg1 == cuadrupla_siguiente.result or cuadrupla.arg2 == cuadrupla_siguiente.result:
-            if cuadrupla.op == '+':
-                self.text_section += f"\n{'    ' * self.indentation}add ${self.variables_cargadas[cuadrupla_siguiente.result]}, ${self.variables_cargadas[cuadrupla.arg1]}, ${self.variables_cargadas[cuadrupla.arg2]}\n"
+        if quadruple.arg1 == cuadrupla_siguiente.result or quadruple.arg2 == cuadrupla_siguiente.result:
+            if quadruple.op == '+':
+                self.text_section += f"\n{'    ' * self.indentation}add ${self.variables_cargadas[cuadrupla_siguiente.result]}, ${self.variables_cargadas[quadruple.arg1]}, ${self.variables_cargadas[quadruple.arg2]}\n"
                 self.cuadruplas_procesadas.add(cuadrupla_siguiente)
                 return
-            elif cuadrupla.op == '-':
-                self.text_section += f"\n{'    ' * self.indentation}sub ${self.variables_cargadas[cuadrupla_siguiente.result]}, ${self.variables_cargadas[cuadrupla.arg1]}, ${self.variables_cargadas[cuadrupla.arg2]}\n"
+            elif quadruple.op == '-':
+                self.text_section += f"\n{'    ' * self.indentation}sub ${self.variables_cargadas[cuadrupla_siguiente.result]}, ${self.variables_cargadas[quadruple.arg1]}, ${self.variables_cargadas[quadruple.arg2]}\n"
                 self.cuadruplas_procesadas.add(cuadrupla_siguiente)
                 return
 
         temp3 = self.get_temp()
 
-        if cuadrupla.op == '+':
-            self.text_section += f"\n{'    ' * self.indentation}add ${temp3}, ${self.variables_cargadas[cuadrupla.arg1]}, ${self.variables_cargadas[cuadrupla.arg2]}\n"
-        elif cuadrupla.op == '-':
-            self.text_section += f"\n{'    ' * self.indentation}sub ${temp3}, ${self.variables_cargadas[cuadrupla.arg1]}, ${self.variables_cargadas[cuadrupla.arg2]}\n"
-        elif cuadrupla.op == '*':
-            self.text_section += f"\n{'    ' * self.indentation}mul ${temp3}, ${self.variables_cargadas[cuadrupla.arg1]}, ${self.variables_cargadas[cuadrupla.arg2]}\n"
-        elif cuadrupla.op == '/':
-            self.text_section += f"\n{'    ' * self.indentation}div ${self.variables_cargadas[cuadrupla.arg1]}, ${self.variables_cargadas[cuadrupla.arg2]}\n"
+        if quadruple.op == '+':
+            self.text_section += f"\n{'    ' * self.indentation}add ${temp3}, ${self.variables_cargadas[quadruple.arg1]}, ${self.variables_cargadas[quadruple.arg2]}\n"
+        elif quadruple.op == '-':
+            self.text_section += f"\n{'    ' * self.indentation}sub ${temp3}, ${self.variables_cargadas[quadruple.arg1]}, ${self.variables_cargadas[quadruple.arg2]}\n"
+        elif quadruple.op == '*':
+            self.text_section += f"\n{'    ' * self.indentation}mul ${temp3}, ${self.variables_cargadas[quadruple.arg1]}, ${self.variables_cargadas[quadruple.arg2]}\n"
+        elif quadruple.op == '/':
+            self.text_section += f"\n{'    ' * self.indentation}div ${self.variables_cargadas[quadruple.arg1]}, ${self.variables_cargadas[quadruple.arg2]}\n"
             self.text_section += f"{'    ' * self.indentation}mflo ${temp3}\n"
             temp4 = self.get_temp()
             self.text_section += f"{'    ' * self.indentation}mfhi ${temp4}\n"
             self.temp_counter -= 1
 
-    def mips_metodos(self, cuadrupla):
+    # def mips_aritmetica(self, quadruple):
+    #     # Simplifying arithmetic operations
+    #     temp1 = self.variables_cargadas.get(quadruple.arg1, quadruple.arg1)
+    #     temp2 = self.variables_cargadas.get(quadruple.arg2, quadruple.arg2)
+
+    #     result_reg = self.get_temp()
+    #     if quadruple.op == '+':
+    #         self.text_section += f"{self.indent('')}add {result_reg}, {temp1}, {temp2}\n"
+    #     elif quadruple.op == '-':
+    #         self.text_section += f"{self.indent('')}sub {result_reg}, {temp1}, {temp2}\n"
+    #     elif quadruple.op == '*':
+    #         self.text_section += f"{self.indent('')}mul {result_reg}, {temp1}, {temp2}\n"
+    #     elif quadruple.op == '/':
+    #         self.text_section += f"{self.indent('')}div {temp1}, {temp2}\n{self.indent('')}mflo {result_reg}\n"
+
+    #     # Store the result in a variable if needed
+    #     if quadruple.result:
+    #         self.text_section += f"{self.indent('')}sw {result_reg}, {quadruple.result}\n"
+
+
+    def mips_metodos(self, quadruple):
         
         self.indentation = 0
-        if len(self.methods) >= 1 and cuadrupla.arg1 not in self.methods and self.methods[-1] == 'main':
+        if len(self.methods) >= 1 and quadruple.arg1 not in self.methods and self.methods[-1] == 'main':
             self.text_section += f"\n{'    '}li $v0, 10\n{'    '}syscall\n"
 
-        self.text_section += f"\n{cuadrupla.arg1}:\n"
-        self.methods.append(cuadrupla.arg1)
+        self.text_section += f"\n{quadruple.arg1}:\n"
+        self.methods.append(quadruple.arg1)
         self.indentation += 1
 
-    def mips_asignacion(self, cuadrupla):
+    def mips_asignacion(self, quadruple):
 
-        if cuadrupla.result not in self.variables:
-            if cuadrupla.arg2 == 'String':
-                self.data_section += f"{cuadrupla.result}: .asciiz {cuadrupla.arg1}\n"
-                self.variables.add(cuadrupla.result)
-            elif cuadrupla.arg2 == 'Int':
-                self.data_section += f"{cuadrupla.result}: .word {cuadrupla.arg1}\n"
-                self.variables.add(cuadrupla.result) 
-            elif cuadrupla.arg2 == 'Bool':
-                self.data_section += f"{cuadrupla.result}: .word {1 if cuadrupla.arg1 == 'true' else 0}\n"
-                self.variables.add(cuadrupla.result)
+        if quadruple.result not in self.variables:
+            if quadruple.arg2 == 'String':
+                self.data_section += f"{quadruple.result}: .asciiz {quadruple.arg1}\n"
+                self.variables.add(quadruple.result)
+            elif quadruple.arg2 == 'Int':
+                self.data_section += f"{quadruple.result}: .word {quadruple.arg1}\n"
+                self.variables.add(quadruple.result) 
+            elif quadruple.arg2 == 'Bool':
+                self.data_section += f"{quadruple.result}: .word {1 if quadruple.arg1 == 'true' else 0}\n"
+                self.variables.add(quadruple.result)
         else:
-            operador_temporal = cuadrupla.arg1
+            operador_temporal = quadruple.arg1
 
-            for cuadrupla_iteradora in reversed(self.cuadruplas_iniciales[:self.cuadruplas_iniciales.index(cuadrupla)]):
+            for cuadrupla_iteradora in reversed(self.cuadruplas_iniciales[:self.cuadruplas_iniciales.index(quadruple)]):
 
                 if cuadrupla_iteradora.op == 'CreateMethod':
 
@@ -443,31 +462,66 @@ class TranslatetoMIPSFunc:
                 if cuadrupla_iteradora.result == operador_temporal and cuadrupla_iteradora.op == 'MethodHandler':
                     nuevo_temporal = self.get_temp()
                     self.text_section += f"{'    ' * self.indentation}move ${nuevo_temporal}, $v0\n"
-                    self.variables_cargadas[cuadrupla.result] = nuevo_temporal
+                    self.variables_cargadas[quadruple.result] = nuevo_temporal
                     return
 
-            self.text_section += f"{'    ' * self.indentation}sw $t{self.temp_counter-1}, {cuadrupla.result}\n"
-            self.variables_cargadas[cuadrupla.result] = f"t{self.temp_counter-1}"
+            self.text_section += f"{'    ' * self.indentation}sw $t{self.temp_counter-1}, {quadruple.result}\n"
+            self.variables_cargadas[quadruple.result] = f"t{self.temp_counter-1}"
     
-    def mips_procedure(self, cuadrupla):
-        if cuadrupla.arg2 in self.variables_cargadas:
-            if cuadrupla.arg1 == 'out_int':
-                        self.text_section += f"\n{'    ' * self.indentation}li $v0, 1\n"
-                        self.text_section += f"{'    ' * self.indentation}move $a0, ${self.variables_cargadas[cuadrupla.arg2]}\n"
-                        self.text_section += f"{'    ' * self.indentation}syscall\n"
-            elif cuadrupla.arg1 == 'out_string':
-                self.text_section += f"\n{'    ' * self.indentation}li $v0, 4\n"
-                self.text_section += f"{'    ' * self.indentation}move $a0, ${self.variables_cargadas[cuadrupla.arg2]}\n"
-                self.text_section += f"{'    ' * self.indentation}syscall\n"
-        else:
-            if cuadrupla.arg1 == 'out_int':
-                        self.text_section += f"\n{'    ' * self.indentation}li $v0, 1\n"
-                        self.text_section += f"{'    ' * self.indentation}move $a0, ${cuadrupla.arg2}\n"
-                        self.text_section += f"{'    ' * self.indentation}syscall\n"
-            elif cuadrupla.arg1 == 'out_string':
-                self.text_section += f"\n{'    ' * self.indentation}li $v0, 4\n"
-                self.text_section += f"{'    ' * self.indentation}move $a0, ${cuadrupla.arg2}\n"
-                self.text_section += f"{'    ' * self.indentation}syscall\n"
-        self.text_section += f"\n{'    ' * self.indentation}li $v0, 4\n"
-        self.text_section += f"{'    ' * self.indentation}la $a0, newline\n"
-        self.text_section += f"{'    ' * self.indentation}syscall\n"
+    # def mips_procedure(self, quadruple):
+    #     if quadruple.arg2 in self.variables_cargadas:
+    #         if quadruple.arg1 == 'out_int':
+    #                     self.text_section += f"\n{'    ' * self.indentation}li $v0, 1\n"
+    #                     self.text_section += f"{'    ' * self.indentation}move $a0, ${self.variables_cargadas[quadruple.arg2]}\n"
+    #                     self.text_section += f"{'    ' * self.indentation}syscall\n"
+    #         elif quadruple.arg1 == 'out_string':
+    #             self.text_section += f"\n{'    ' * self.indentation}li $v0, 4\n"
+    #             self.text_section += f"{'    ' * self.indentation}move $a0, ${self.variables_cargadas[quadruple.arg2]}\n"
+    #             self.text_section += f"{'    ' * self.indentation}syscall\n"
+    #     else:
+    #         if quadruple.arg1 == 'out_int':
+    #                     self.text_section += f"\n{'    ' * self.indentation}li $v0, 1\n"
+    #                     self.text_section += f"{'    ' * self.indentation}move $a0, ${quadruple.arg2}\n"
+    #                     self.text_section += f"{'    ' * self.indentation}syscall\n"
+    #         elif quadruple.arg1 == 'out_string':
+    #             self.text_section += f"\n{'    ' * self.indentation}li $v0, 4\n"
+    #             self.text_section += f"{'    ' * self.indentation}move $a0, ${quadruple.arg2}\n"
+    #             self.text_section += f"{'    ' * self.indentation}syscall\n"
+    #     self.text_section += f"\n{'    ' * self.indentation}li $v0, 4\n"
+    #     self.text_section += f"{'    ' * self.indentation}la $a0, newline\n"
+    #     self.text_section += f"{'    ' * self.indentation}syscall\n"
+
+    def mips_procedure(self, quadruple):
+        # Dynamically determine the syscall based on procedure type
+        if quadruple.arg1 == 'out_int':
+            syscall_code = '1'  # Print integer
+            arg = self.variables_cargadas.get(quadruple.arg2, f"${quadruple.arg2}")
+            self.text_section += f"{self.indent('')}li $v0, {syscall_code}\n"
+            self.text_section += f"{self.indent('')}move $a0, {arg}\n"
+        elif quadruple.arg1 == 'out_string':
+            syscall_code = '4'  # Print string
+            arg = self.variables_cargadas.get(quadruple.arg2, f"${quadruple.arg2}")
+            self.text_section += f"{self.indent('')}li $v0, {syscall_code}\n"
+            self.text_section += f"{self.indent('')}la $a0, {arg}\n"
+        # Execute syscall and print newline
+        self.text_section += f"{self.indent('')}syscall\n"
+        self.text_section += f"{self.indent('')}li $v0, 4\n"
+        self.text_section += f"{self.indent('')}la $a0, newline\n"
+        self.text_section += f"{self.indent('')}syscall\n"
+
+    def cleanup_mips_code(self):
+        self.text_section = self.text_section.replace('$$', '$')
+        self.data_section = self.data_section.replace('$$', '$')
+
+    def indent(self, code):
+        return '    ' * self.indentation + code
+
+    def correct_register_syntax(self):
+        patternA = r'(?<!\$)(a\d+)'
+        patternT = r'(?<!\$)(t\d+)'
+
+        self.text_section = re.sub(patternA, r'$\1', self.text_section)
+        self.data_section = re.sub(patternA, r'$\1', self.data_section)
+
+        self.text_section = re.sub(patternT, r'$\1', self.text_section)
+        self.data_section = re.sub(patternT, r'$\1', self.data_section)
